@@ -1,0 +1,69 @@
+{
+  "id": "protagonist",
+  "name": "Protagonista",
+  "reference": "References/01_CHARACTER/2acbf38f-167c-417f-850b-15605dab75f1.png",
+  "height": 1.75,
+  "proportions": {
+    "thigh": 0.44,
+    "shin": 0.43,
+    "ankleH": 0.075,
+    "footLen": 0.25,
+    "heelBack": 0.06,
+    "spine": 0.47,
+    "neck": 0.09,
+    "headR": 0.112,
+    "shoulderW": 0.4,
+    "chestDepth": 0.2
+  },
+  "colors": {
+    "skin": "#E8CFC0",
+    "skinShadow": "#6E4B47",
+    "hair": "#1C0F11",
+    "hairLight": "#5A3436",
+    "cloak": "#24141A",
+    "cloakLight": "#4E3230",
+    "cloakRim": "#E33B38",
+    "cross": "#9C3034",
+    "eyes": "#070405",
+    "lips": "#6E3E3D",
+    "boots": "#140C0E",
+    "trousers": "#1A1013"
+  },
+  "cloak": {
+    "length": 1.34,
+    "hemLift": 0.07,
+    "hemFlare": 0.66,
+    "shoulderSpan": 0.27
+  },
+  "hair": {
+    "strands": 18,
+    "length": 0.2
+  },
+  "walk": {
+    "stepLenBase": 0.36,
+    "stepLenPerSpeed": 0.38,
+    "duty": 0.62,
+    "lift": 0.075,
+    "bob": 0.024,
+    "lean": 0.05,
+    "headDown": 0.1,
+    "accelTime": 1.3
+  },
+  "look": {
+    "_comment": "Aspecto base del personaje (global). Ajustado por el usuario en el editor el 2026-11-02.",
+    "face": {
+      "width": 1.07,
+      "jaw": 1.04,
+      "eyeOpen": 0.42,
+      "eyeSize": 1.29,
+      "eyeDepth": 0.1,
+      "mouthWidth": 1.2,
+      "shadow": 0.77,
+      "softness": 0.33,
+      "bangs": 1.05,
+      "hairVolume": 0.8,
+      "collar": 0.41
+    },
+    "gait": {}
+  }
+}

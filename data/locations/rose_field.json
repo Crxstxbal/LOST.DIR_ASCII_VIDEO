@@ -1,0 +1,49 @@
+{
+  "id": "rose_field",
+  "name": "THE ROSE FIELD",
+  "description": "Campo interminable de rosas: flores cercanas detalladas, lejanas simplificadas, viento en olas, pétalos, niebla ligera y cielo atmosférico.",
+  "references": [
+    "References/03_LOCATION_INSPO/ae81978348273cc6509405214805c0c9.jpg",
+    "References/03_LOCATION_INSPO/7d46f35cf3ebaf46af94840df956f6be.jpg",
+    "References/03_LOCATION_INSPO/0ae19d8270205c04f6d75d736a37f7a3.jpg"
+  ],
+  "params": {
+    "roseDensity": 1,
+    "roseHeight": 1,
+    "petals": 1,
+    "skyGlow": 0.75,
+    "cloudCover": 0.42,
+    "cloudSpeed": 0.3,
+    "sunX": 0.3,
+    "sunHeight": 0.04,
+    "fogDensity": 0.8,
+    "fogBands": 0.8,
+    "fogHeight": 1,
+    "ridgeHeight": 0.5
+  },
+  "paramDefs": [
+    { "key": "roseDensity", "label": "Densidad de rosas", "min": 0, "max": 1.4, "step": 0.02 },
+    { "key": "roseHeight", "label": "Altura de rosas", "min": 0.3, "max": 2, "step": 0.05 },
+    { "key": "petals", "label": "Pétalos al viento", "min": 0, "max": 4, "step": 0.05 },
+    { "key": "skyGlow", "label": "Resplandor del cielo", "min": 0, "max": 1.5, "step": 0.05 },
+    { "key": "cloudCover", "label": "Nubes", "min": 0, "max": 1, "step": 0.02 },
+    { "key": "cloudSpeed", "label": "Velocidad de nubes", "min": 0, "max": 3, "step": 0.05 },
+    { "key": "sunX", "label": "Posición del sol (x)", "min": 0, "max": 1, "step": 0.01 },
+    { "key": "sunHeight", "label": "Altura del sol", "min": -0.1, "max": 0.5, "step": 0.01 },
+    { "key": "fogDensity", "label": "Densidad de niebla", "min": 0, "max": 3, "step": 0.05 },
+    { "key": "fogBands", "label": "Bancos de niebla", "min": 0, "max": 2, "step": 0.05 },
+    { "key": "fogHeight", "label": "Altura de niebla", "min": 0.2, "max": 3, "step": 0.05 },
+    { "key": "ridgeHeight", "label": "Colinas lejanas", "min": 0, "max": 3, "step": 0.05 }
+  ],
+  "light": { "side": -1, "rim": 1.0, "rimColor": "#E4A18B", "ambient": "#8E292D", "ambientAmt": 0.1 },
+  "fogColor": "#6E3A3A",
+  "layers": [
+    { "generator": "sky", "params": { "zenith": "#1A0F14", "mid": "sepia", "horizon": "#B5605A", "cloud": "#3A2428", "cloudLit": "pale", "sun": "pale" } },
+    { "generator": "ridges", "params": { "distance": 2600, "height": 90, "scale": 700, "seed": 4, "color": "#2A1A1E", "fogK": 0.06, "fogMix": 0.9, "density": 0.22 } },
+    { "generator": "ridges", "params": { "distance": 900, "height": 18, "scale": 160, "seed": 6, "color": "#1C1214", "fogK": 0.1, "fogMix": 0.75, "density": 0.3 } },
+    { "generator": "roseGround", "params": { "bloom": 0.6 } },
+    { "generator": "fogBands", "params": { "depth": 70, "amount": 0.45, "height": 6, "seed": 15, "light": 0.35 } },
+    { "generator": "roses", "params": { "density": 0.72, "far": 45 } },
+    { "generator": "particles", "params": { "kind": "petal", "count": 70, "amountParam": "petals", "colors": ["red", "blood", "pale"], "zFar": 25 } }
+  ]
+}
