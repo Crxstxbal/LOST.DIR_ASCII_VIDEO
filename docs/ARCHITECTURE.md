@@ -162,3 +162,58 @@ Medido con `npm run perf` (Node) y en Edge (pool de workers), con el proyecto de
 | L | Árbol de El Tabo |
 | M | Exportación MP4 H.264 + AAC con FFmpeg |
 | G | Plano B cenital del campo de rosas, que necesita una vista cenital del personaje |
+
+## CINEMATIC ASCII HYBRID — Fase 01: prototipo RED FIELD (rama `hybrid-red-field`)
+**Referencias** (`References/06_VISUAL_REFERENCES`, 5 MP4 analizados con fotogramas extraídos por FFmpeg):
+- Tres son de un MMORPG ASCII (hierba hecha con glifos de trazo colocados por brizna, sombras proyectadas, apertura de la hierba al paso, cámara picada, fondo muy oscuro).
+- Uno es un montaje sobre el mismo juego (glosario de glifos, nubes, reflejos).
+- Uno es un mundo 3D low-res (terreno ondulado, billboards, niebla).
+
+Se adaptó la técnica, no los escenarios.
+
+**Motor HYBRID** (`src/engine/hybrid/`, sin dependencias nuevas, 3D por software, determinista):
+- **Cámara 3D** (`camera3d.ts`): con yaw = 0 proyecta igual que el `View` del LEGACY (hay prueba de paridad). Añade `aim` y el tipo `overhead`.
+- **G-buffer y rasterizado** (`gbuffer.ts`, `rasterizer.ts`): G-buffer a resolución de zona de glifo (albedo, normal, profundidad, tipo, tinta) y rasterizador con z-buffer y corrección de perspectiva.
+- **Terreno** (`terrain.ts`): campo de alturas con malla muestreada en pantalla (LOD automático por distancia) y colinas lejanas.
+- **Vegetación** (`vegetation.ts`):
+  - rosas instanciadas por hash del mundo (altura, orientación, escala, color, fase), en tres bandas de distancia;
+  - viento compartido;
+  - reacción local al paso, analítica sobre la trayectoria del actor (`bendAt`);
+  - maleza seca y pétalos.
+- **Glifos libres** (`glyphStrokes.ts`): solo vegetación y partículas, al tamaño de celda de la rejilla y anclados al mundo. Tallos `| / \`, rosas `@` con anillo `( ) o ~`, hojas y briznas `' , \``.
+- **Luz** (`lighting.ts`): diferida (lambert + ambiente + borde de luz), sombra proyectada del protagonista, niebla por profundidad y altura, y cielo con nubes.
+- **Composición** (`renderHybrid.ts`):
+  - el personaje es el mismo `CharacterRenderer` (rostro, aspecto global, caminata y LOD), compuesto por profundidad;
+  - la conversión es el mismo `composeAscii` del LEGACY;
+  - después vienen bloom moderado (`post.ts`) y el post habitual.
+- **Selección del motor:** `renderFrame` delega al HYBRID si el plano tiene `renderer: 'hybrid'` o si se fuerza con `opts.renderer`.
+
+**Compatibilidad:**
+- `tests/golden/legacy-hashes.json` y `tests/legacy-golden.test.ts` demuestran que el LEGACY renderiza bit a bit igual que antes.
+- Todos los campos nuevos son opcionales (`shot.renderer`, `camera.aim`, tipo `overhead`, `output.hybrid`). El formato pasa a la versión 4 y los proyectos v1–v3 cargan igual.
+- `rose_field` no se modificó. `red_field` es una locación nueva que incluye las capas LEGACY para poder compararse.
+
+**Plantilla:** Nuevo… ▸ "RED FIELD — prueba híbrida" (`project/templates.ts`). Tiene 5 tomas: general extremo, travelling lateral, detalle de vegetación al paso, primer plano del rostro y cenital ascendente.
+
+**UI:**
+- **Selector en el transporte:** SEGÚN PLANO / LEGACY / HYBRID / COMPARAR. COMPARAR muestra dos visores con métricas propias (ms, fps, conversión, objetos visibles, glifos libres) y tiene "Captura comparativa".
+- **Panel ASCII Output → Efectos híbridos:** glifos libres, bloom, niebla, sombras y ambiente.
+- **Plano → Renderizador:** elige el motor de cada plano.
+
+**Exportación MP4** (CLI): `npm run render -- --template redfield [--shot id] --mp4 exports/x.mp4`. Envía fotogramas RGBA por stdin al FFmpeg del sistema (`FFMPEG_PATH` o el PATH) y produce H.264 yuv420p a los fps del proyecto. Comprobado con ffprobe: 216 fotogramas, 9,000 s, 24 fps. Todavía no tiene audio ni botón en la UI.
+
+**Rendimiento medido** (Node, `npm run perf -- --template redfield --renderer …`, ms por fotograma):
+| | LEGACY QUALITY | HYBRID QUALITY | LEGACY PERFORMANCE | HYBRID PERFORMANCE |
+|---|---|---|---|---|
+| 01 general extremo | 175 | 110 | 67 | 52 |
+| 02 travelling | 195 | 105 | 81 | 49 |
+| 03 vegetación | 179 | 117 | 70 | 49 |
+| 04 rostro | 173 | 177 | 56 | 67 |
+| 05 cenital | 199 | 102 | 53 | 46 |
+
+Desglose del HYBRID en QUALITY: post y bloom 27, personaje 26, luz y niebla 24, conversión 21, vegetación 8, terreno 8, glifos libres 3. En Edge, con el pool de workers, las 5 tomas se reproducen a 24 fps (BALANCED).
+
+**Límites:**
+- **Encuadre:** el personaje se dibuja con su sistema 2D de vistas (perfil, frente, espalda), sin ángulos intermedios. En LEGACY queda unos píxeles más abajo que en HYBRID por el desplazamiento conocido del `Painter`. El HYBRID lo compensa.
+- **Cámara:** el cenital del LEGACY es una aproximación (cámara muy elevada), no un cenital real.
+- **Escena:** sin agua ni reflejos, y la vegetación cercana del cenital es escasa.

@@ -3,7 +3,9 @@ import { DEFAULT_GRADE, type GradeKey, type GradeParams } from '../grading/Color
 import type { FaceParams } from '../character/face';
 import type { GaitParams } from '../animation/locomotion';
 
-export type CameraType = 'side' | 'front' | 'elevated' | 'closeup' | 'wide';
+export type CameraType = 'side' | 'front' | 'elevated' | 'closeup' | 'wide' | 'overhead';
+
+export type RendererId = 'legacy' | 'hybrid';
 
 export interface CameraParams {
   type: CameraType;
@@ -25,6 +27,12 @@ export interface CameraParams {
   moveY: number;
   /** Zoom multiplier reached at the end of the shot (1 = none). */
   zoomTo: number;
+  /**
+   * HYBRID only: extra aim (radians). yaw turns the camera, pitch adds to the
+   * horizon-derived pitch (for 'overhead' it is the absolute pitch; default ≈ 85°).
+   * The LEGACY renderer has no yaw and ignores this.
+   */
+  aim?: { yaw?: number; pitch?: number };
 }
 
 export type Heading = 'right' | 'left' | 'toward' | 'away';
@@ -108,7 +116,21 @@ export interface AsciiOutput {
   preview: PreviewQuality;
   /** Export/capture pixel scale over 1920×1080 (same grid, larger glyphs). */
   exportScale: 1 | 1.5 | 2;
+  /** HYBRID renderer effect intensities (ignored by LEGACY). */
+  hybrid: HybridFx;
 }
+
+/** Complementary effects of the HYBRID renderer; they never replace the ASCII structure. */
+export interface HybridFx {
+  /** free world-anchored glyphs for vegetation/particles (0 = grid only) */
+  strokes: number;
+  bloom: number;
+  fog: number;
+  shadows: number;
+  ambient: number;
+}
+
+export const DEFAULT_HYBRID_FX: HybridFx = { strokes: 1, bloom: 0.35, fog: 1, shadows: 0.85, ambient: 1 };
 
 export const DEFAULT_OUTPUT: AsciiOutput = {
   cols: 360,
@@ -122,6 +144,7 @@ export const DEFAULT_OUTPUT: AsciiOutput = {
   autoLod: true,
   preview: 'balanced',
   exportScale: 1,
+  hybrid: { ...DEFAULT_HYBRID_FX },
 };
 
 /** Advanced, explicit per-shot ASCII modifications. Resolution is never per shot. */
@@ -163,13 +186,15 @@ export interface Shot {
   effects: EffectsParams;
   /** Advanced: explicit per-shot ASCII modifications (absent = inherit the project output). */
   asciiOverride?: AsciiOverride;
+  /** Which renderer draws this shot (absent = 'legacy'). */
+  renderer?: RendererId;
   /** Overrides for the location's own parameters. */
   locationParams: Record<string, number | string | boolean>;
 }
 
 export interface Project {
   format: 'lostdir-ascii-cinema';
-  version: 3;
+  version: 4;
   name: string;
   seed: number;
   fps: 24 | 30;
@@ -189,6 +214,8 @@ export const CAMERA_PRESETS: Record<CameraType, Omit<CameraParams, 'type'>> = {
   elevated: { distance: 14, height: 6, horizon: 0.12, zoom: 1, offsetX: 0, follow: 0.8, moveX: 0, moveY: 0, zoomTo: 1 },
   closeup: { distance: 1.0, height: 1.53, horizon: 0.5, zoom: 1.6, offsetX: -0.09, follow: 1, moveX: 0, moveY: 0, zoomTo: 1 },
   wide: { distance: 70, height: 16, horizon: 0.34, zoom: 1, offsetX: 0, follow: 0.4, moveX: 0, moveY: 0, zoomTo: 1 },
+  // true top-down only in HYBRID; LEGACY approximates it as a very steep elevated view
+  overhead: { distance: 3, height: 14, horizon: -1.6, zoom: 1, offsetX: 0, follow: 0.9, moveX: 0, moveY: 0, zoomTo: 1 },
 };
 
 export const DEFAULT_EFFECTS: EffectsParams = {
@@ -234,6 +261,7 @@ export function makeShot(partial: Partial<Shot> & { location: string; name: stri
     grade: { ...DEFAULT_GRADE, ...(partial.grade ?? {}) },
     gradeKeys: partial.gradeKeys ?? [],
     ...(partial.asciiOverride && Object.keys(partial.asciiOverride).length ? { asciiOverride: { ...partial.asciiOverride } } : {}),
+    ...(partial.renderer === 'hybrid' ? { renderer: 'hybrid' as const } : {}),
     effects: { ...DEFAULT_EFFECTS, ...(partial.effects ?? {}) },
     locationParams: partial.locationParams ?? {},
   };
@@ -242,7 +270,7 @@ export function makeShot(partial: Partial<Shot> & { location: string; name: stri
 export function defaultProject(): Project {
   return {
     format: 'lostdir-ascii-cinema',
-    version: 3,
+    version: 4,
     name: 'lostdir_prototipo',
     seed: 1337,
     fps: 24,

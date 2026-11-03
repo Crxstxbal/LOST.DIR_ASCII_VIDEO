@@ -13,7 +13,8 @@ import type { FaceParams } from './character/face';
 import type { GaitParams } from './animation/locomotion';
 import type { CharacterDef } from './character/types';
 import { evalGrade, makeGrader } from './grading/ColorGrade';
-import { resolveAscii, type ActorParams, type Project, type Shot } from './project/schema';
+import { resolveAscii, type ActorParams, type Project, type RendererId, type Shot } from './project/schema';
+import { renderHybrid } from './hybrid/renderHybrid';
 import { Painter, SX, SY } from './raster/Painter';
 import { getGenerator, getLocation } from './scene/registry';
 import { DrawList, type FrameCtx, type PassId } from './scene/types';
@@ -51,7 +52,7 @@ export function simViewFor(a: ActorParams): SimView {
   return a.heading === 'toward' ? 'front' : a.heading === 'away' ? 'back' : 'side';
 }
 
-interface ShotRuntime {
+export interface ShotRuntime {
   key: string;
   track: LocoTrack;
   sim: CharacterSim;
@@ -61,12 +62,12 @@ interface ShotRuntime {
 
 const runtimes = new Map<string, ShotRuntime>();
 
-function shotSeed(project: Project, shot: Shot) {
+export function shotSeed(project: Project, shot: Shot) {
   return (project.seed ^ hashString(shot.id)) >>> 0;
 }
 
 /** Simulation runtime per shot, rebuilt only when parameters that affect motion change. */
-function runtimeFor(project: Project, shot: Shot): ShotRuntime | null {
+export function runtimeFor(project: Project, shot: Shot): ShotRuntime | null {
   if (!shot.actor) return null;
   // the walk comes from the character's global look, placement/actions from the shot
   const actor: ActorParams = { ...shot.actor, gait: resolveLook(project, shot.actor.character).gait };
@@ -117,7 +118,7 @@ export function gridFor(cols: number, W: number, H: number) {
 
 const painters = new Map<string, Painter>();
 /** Pooled painters (rasters are reused across frames); `tag` separates passes sharing a grid. */
-function painterFor(cols: number, rows: number, vw: number, vh: number, tag = '') {
+export function painterFor(cols: number, rows: number, vw: number, vh: number, tag = '') {
   const k = `${tag}:${cols}x${rows}x${vw}x${vh}`;
   let p = painters.get(k);
   if (!p) {
@@ -152,6 +153,8 @@ export interface RenderOptions {
   height: number;
   /** Performance preview only: scales the global grid (export always uses 1). */
   colsScale?: number;
+  /** Force a renderer (comparator / CLI); default = the shot's own renderer. */
+  renderer?: RendererId;
   /**
    * Optional profiler: when given, renderFrame adds the milliseconds spent in each stage
    * (animation, scene build, every layer, raster passes, ASCII readback/cells, post).
@@ -174,6 +177,9 @@ export interface RenderResult {
   head?: { x: number; y: number; s: number };
   /** Character level of detail used for this frame. */
   lod?: CharacterLod;
+  /** Which renderer produced the frame, plus its counters (visible objects, strokes…). */
+  renderer?: RendererId;
+  stats?: Record<string, number>;
 }
 
 /**
@@ -181,6 +187,7 @@ export interface RenderResult {
  * the same inputs always produce the same pixels.
  */
 export function renderFrame(project: Project, shotIndex: number, t: number, opts: RenderOptions): RenderResult {
+  if ((opts.renderer ?? project.shots[shotIndex].renderer ?? 'legacy') === 'hybrid') return renderHybrid(project, shotIndex, t, opts);
   const pf = opts.profile;
   const tStart = pf ? performance.now() : 0;
   let tMark = tStart;
@@ -333,6 +340,7 @@ export function renderFrame(project: Project, shotIndex: number, t: number, opts
 
   const data = new Uint8ClampedArray(W * H * 4);
   const grader = makeGrader(grade, palette);
+  const tConv = performance.now();
   composeAscii(data, passes, {
     width: W,
     height: H,
@@ -348,6 +356,7 @@ export function renderFrame(project: Project, shotIndex: number, t: number, opts
     sharpness: A.sharpness,
     profile: pf,
   });
+  const conversionMs = performance.now() - tConv;
   lap('ascii: total composición');
   applyPost(data, W, H, shot.effects, ctx.frame + shotIndex * 100000, seed);
   lap('post: grano, viñeta, fundido');
@@ -361,7 +370,7 @@ export function renderFrame(project: Project, shotIndex: number, t: number, opts
     }
   }
   if (pf) pf['TOTAL'] = (pf['TOTAL'] ?? 0) + performance.now() - tStart;
-  return { data, width: W, height: H, cols: grid.cols, rows: grid.rows, view, head: headScr, lod };
+  return { data, width: W, height: H, cols: grid.cols, rows: grid.rows, view, head: headScr, lod, renderer: 'legacy', stats: { objects: list.items.length, strokes: 0, conversionMs } };
 }
 
 /** Clear cached simulations (e.g. after loading a project). */

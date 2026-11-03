@@ -142,7 +142,7 @@ describe('project compatibility', () => {
     p.shots[0].ascii = { cols: 240, charset: 'cine', dither: true, bgGlow: 0.16, glyphGain: 2.1 };
     p.shots[1].ascii = { cols: 450, charset: 'cine', dither: true, bgGlow: 0.16, glyphGain: 1.5 };
     const q = parseProject(JSON.stringify(p));
-    expect(q.version).toBe(3);
+    expect(q.version).toBe(4);
     expect(q.output.cols).toBe(240);
     expect(q.shots[0].asciiOverride).toBeUndefined();
     expect(q.shots[1].asciiOverride).toEqual({ glyphGain: 1.5 });

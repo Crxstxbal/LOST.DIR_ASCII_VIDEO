@@ -25,6 +25,7 @@ const CAMERA_LABELS: Record<CameraType, string> = {
   elevated: 'Elevada',
   closeup: 'Primer plano',
   wide: 'Plano general extremo',
+  overhead: 'Cenital (HYBRID; en LEGACY se aproxima)',
 };
 
 const GRADE_DEFS: { key: NumericGradeKey; label: string; min: number; max: number; step: number }[] = [
@@ -86,6 +87,15 @@ export function PropertiesPanel({ project, shotIndex, localT, onChange }: Props)
           <>
             <Section title="Plano">
               <TextField label="Nombre" value={shot.name} onChange={(name) => setShot({ name })} />
+              <Select
+                label="Renderizador"
+                value={shot.renderer ?? 'legacy'}
+                options={[
+                  { value: 'legacy' as const, label: 'LEGACY (motor original)' },
+                  { value: 'hybrid' as const, label: 'HYBRID (experimental 3D)' },
+                ]}
+                onChange={(renderer) => setShot({ renderer: renderer === 'hybrid' ? 'hybrid' : undefined })}
+              />
               <Select
                 label="Locación"
                 value={shot.location}

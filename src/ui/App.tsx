@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { defaultProject, type Project } from '../engine/project/schema';
+import { defaultProject, type Project, type RendererId } from '../engine/project/schema';
+import { redFieldProject } from '../engine/project/templates';
 import { parseProject, serializeProject } from '../engine/project/ProjectIO';
 import { projectDuration, shotAt } from '../engine/render';
 import { PropertiesPanel } from './PropertiesPanel';
@@ -33,6 +34,21 @@ export function App() {
   const [saved, setSaved] = useState<{ name: string; mtime: number }[]>([]);
   const [dirty, setDirty] = useState(false);
   const preview = useMemo(() => new PreviewEngine(), []);
+  // renderer selector: each shot's own renderer, a forced one, or LEGACY | HYBRID side by side
+  const [rmode, setRmode] = useState<'auto' | RendererId | 'compare'>('auto');
+  const [stats2, setStats2] = useState<PreviewStats | null>(null);
+  const compareRef = useRef<PreviewEngine | null>(null);
+  const compareEngine = () => {
+    if (!compareRef.current) {
+      const e = new PreviewEngine(Math.max(1, Math.floor(PreviewEngine.defaultWorkers() / 2)));
+      e.onStats = setStats2;
+      e.onError = (err) => setStatus('Error de render (HYBRID): ' + err.message);
+      e.renderer = 'hybrid';
+      e.setProject(projectRef.current, true);
+      compareRef.current = e;
+    }
+    return compareRef.current;
+  };
   const capture = useMemo(() => new RenderClient(), []);
   const timeRef = useRef(time);
   timeRef.current = time;
@@ -56,6 +72,7 @@ export function App() {
       setProjectState(p);
       preview.setProject(p, reset);
       capture.setProject(p, reset);
+      compareRef.current?.setProject(p, reset);
     },
     [preview, capture],
   );
@@ -138,20 +155,38 @@ export function App() {
     preview.onError = (e) => setStatus('Error de render: ' + e.message);
   }, [preview]);
 
+  // renderer selector
+  useEffect(() => {
+    preview.renderer = rmode === 'compare' ? 'legacy' : rmode === 'auto' ? undefined : rmode;
+    if (rmode === 'compare') compareEngine();
+    if (!playing) {
+      preview.renderStill(timeRef.current);
+      if (rmode === 'compare') compareEngine().renderStill(timeRef.current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rmode]);
+
   // paused: re-render whenever the project or the time changes (latest request wins)
   useEffect(() => {
-    if (!playing) preview.renderStill(time);
-  }, [project, time, playing, preview]);
+    if (playing) return;
+    preview.renderStill(time);
+    if (rmode === 'compare') compareEngine().renderStill(time);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project, time, playing, preview, rmode]);
 
   // playback: the engine owns the clock and the canvas; React gets a throttled time
   useEffect(() => {
     if (!playing) return;
     preview.start(timeRef.current, loopShot);
+    const cmp = rmode === 'compare' ? compareEngine() : null;
+    cmp?.start(timeRef.current, loopShot);
     return () => {
+      cmp?.stop();
       const T = preview.stop();
       if (T !== null) setTime(T);
     };
-  }, [playing, loopShot, preview]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing, loopShot, preview, rmode]);
 
   useEffect(() => {
     preview.profiling = showBreakdown;
@@ -248,6 +283,40 @@ export function App() {
     });
   }
 
+  /** LEGACY | HYBRID of the current frame, side by side with their metrics, saved to exports/. */
+  async function captureCompare() {
+    const ew = Math.round(project.width * project.output.exportScale);
+    const eh = Math.round(project.height * project.output.exportScale);
+    setStatus(`Renderizando captura comparativa ${ew}×${eh} ×2…`);
+    try {
+      const fl = await capture.render(at.index, at.t, ew, eh, 1, false, 'legacy');
+      const fh = await capture.render(at.index, at.t, ew, eh, 1, false, 'hybrid');
+      const band = Math.round(48 * project.output.exportScale);
+      const c = document.createElement('canvas');
+      c.width = ew * 2 + 16;
+      c.height = eh + band;
+      const g = c.getContext('2d')!;
+      g.fillStyle = '#0b0708';
+      g.fillRect(0, 0, c.width, c.height);
+      [fl, fh].forEach((f, k) => {
+        g.putImageData(new ImageData(new Uint8ClampedArray(f.data), f.width, f.height), k * (ew + 16), 0);
+        g.fillStyle = '#e4a18b';
+        g.font = `${Math.round(22 * project.output.exportScale)}px sans-serif`;
+        const st = f.stats ? ` · conversión ${f.stats.conversionMs?.toFixed(0)} ms · objetos ≈${f.stats.objects} · glifos libres ${f.stats.strokes}` : '';
+        g.fillText(`${(f.renderer ?? 'legacy').toUpperCase()} · ${f.cols}×${f.rows} celdas · ${f.ms.toFixed(0)} ms${st}`, k * (ew + 16) + 12, eh + band * 0.65);
+      });
+      const blob: Blob = await new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('toBlob'))), 'image/png'));
+      const shot = project.shots[at.index];
+      const name = `${safeName}_${shot.id}_f${String(Math.round(at.t * project.fps)).padStart(5, '0')}_compare.png`.replace(/[^\w\-. ]/g, '_');
+      const r = await fetch(`/api/capture?name=${encodeURIComponent(name)}`, { method: 'POST', body: blob });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error);
+      setStatus(`Captura comparativa ${c.width}×${c.height} guardada en ${j.path} (LEGACY ${fl.ms.toFixed(0)} ms · HYBRID ${fh.ms.toFixed(0)} ms)`);
+    } catch (e: any) {
+      setStatus('Captura comparativa fallida: ' + e.message);
+    }
+  }
+
   async function capturePng() {
     const ew = Math.round(project.width * project.output.exportScale);
     const eh = Math.round(project.height * project.output.exportScale);
@@ -309,16 +378,23 @@ export function App() {
             ))}
           </select>
           <span className="sep" />
-          <button
-            onClick={() => {
+          <select
+            className="new-menu"
+            value=""
+            title="Crear un proyecto nuevo"
+            onChange={(e) => {
+              const v = e.target.value;
+              if (!v) return;
               if (dirty && !confirm('Hay cambios sin guardar. ¿Crear un proyecto nuevo?')) return;
-              resetProject(defaultProject());
-              setTime(0);
+              resetProject(v === 'redfield' ? redFieldProject() : defaultProject());
+              setTime(v === 'redfield' ? 1.6 : 0);
               setDirty(false);
             }}
           >
-            Nuevo
-          </button>
+            <option value="">Nuevo…</option>
+            <option value="example">Proyecto de ejemplo</option>
+            <option value="redfield">RED FIELD — prueba híbrida</option>
+          </select>
           <button onClick={save} title={`projects/${safeName}.json`}>
             Guardar{dirty ? ' •' : ''}
           </button>
@@ -361,9 +437,18 @@ export function App() {
       </aside>
 
       <main className="center">
-        <div className="viewer">
-          <canvas ref={(c) => preview.attach(c)} />
-          {showBreakdown && stats?.profile && <Breakdown profile={stats.profile} />}
+        <div className={'viewer' + (rmode === 'compare' ? ' compare' : '')}>
+          <div className="pane">
+            <canvas ref={(c) => preview.attach(c)} />
+            {rmode === 'compare' && <span className="pane-label">LEGACY</span>}
+            {showBreakdown && stats?.profile && <Breakdown profile={stats.profile} />}
+          </div>
+          {rmode === 'compare' && (
+            <div className="pane">
+              <canvas ref={(c) => compareEngine().attach(c)} />
+              <span className="pane-label">HYBRID</span>
+            </div>
+          )}
         </div>
         <div className="transport">
           <button onClick={() => setTime(at.start + 0.001)} title="Inicio del plano">
@@ -387,8 +472,32 @@ export function App() {
           <label className="chk">
             <input type="checkbox" checked={loopShot} onChange={(e) => setLoopShot(e.target.checked)} /> bucle del plano
           </label>
+          <span className="rsel" role="group" aria-label="Renderizador">
+            {(
+              [
+                ['auto', 'SEGÚN PLANO'],
+                ['legacy', 'LEGACY'],
+                ['hybrid', 'HYBRID'],
+                ['compare', 'COMPARAR'],
+              ] as const
+            ).map(([v, l]) => (
+              <button key={v} className={rmode === v ? 'on' : ''} onClick={() => setRmode(v)}>
+                {l}
+              </button>
+            ))}
+          </span>
+          {rmode === 'compare' && (
+            <button className="small" onClick={captureCompare} title="LEGACY y HYBRID del fotograma actual, lado a lado, en exports/">
+              Captura comparativa
+            </button>
+          )}
           <MetricsBar stats={stats} uiMs={uiMs.current} playing={playing} breakdown={showBreakdown} onBreakdown={setShowBreakdown} />
         </div>
+        {rmode === 'compare' && (
+          <div className="transport compare-metrics">
+            <MetricsBar stats={stats2} uiMs={uiMs.current} playing={playing} breakdown={false} />
+          </div>
+        )}
         <Timeline project={project} time={time} shotIndex={at.index} onSeek={setTime} />
         <footer className="status">{status}</footer>
       </main>

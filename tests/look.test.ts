@@ -39,7 +39,7 @@ describe('global character look', () => {
     raw.shots[4].actor.face = { eyeOpen: 0.9 };
     raw.shots[0].actor.gait = { stride: 1.2 };
     const q = parseProject(JSON.stringify(raw));
-    expect(q.version).toBe(3);
+    expect(q.version).toBe(4);
     expect(q.characters.protagonist.face).toEqual({ eyeOpen: 0.2, width: 1.1 });
     expect(q.characters.protagonist.gait).toEqual({ stride: 1.2 });
     for (const s of q.shots) {

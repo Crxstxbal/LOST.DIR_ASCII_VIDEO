@@ -13,7 +13,8 @@
     "face-compare": "tsx scripts/face-compare.ts",
     "lod-sheet": "tsx scripts/lod-sheet.ts",
     "walk-compare": "tsx scripts/walk-compare.ts",
-    "perf": "tsx scripts/perf-report.ts"
+    "perf": "tsx scripts/perf-report.ts",
+    "hybrid-sheet": "tsx scripts/hybrid-sheet.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

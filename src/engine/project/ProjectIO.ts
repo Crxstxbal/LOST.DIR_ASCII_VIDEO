@@ -4,6 +4,7 @@ import {
   CAMERA_PRESETS,
   DEFAULT_EFFECTS,
   DEFAULT_OUTPUT,
+  DEFAULT_HYBRID_FX,
   makeShot,
   OVERRIDE_KEYS,
   type AsciiOutput,
@@ -24,7 +25,7 @@ function num(v: any, d: number) {
 }
 
 function sanitizeOutput(o: any, base: AsciiOutput): AsciiOutput {
-  const out: AsciiOutput = { ...base };
+  const out: AsciiOutput = { ...base, hybrid: { ...(base.hybrid ?? DEFAULT_HYBRID_FX) } };
   if (!o || typeof o !== 'object') return out;
   out.cols = Math.round(Math.min(640, Math.max(80, num(o.cols, base.cols))));
   if (typeof o.charset === 'string') out.charset = o.charset;
@@ -38,6 +39,8 @@ function sanitizeOutput(o: any, base: AsciiOutput): AsciiOutput {
   const pv = normalizePreview(o.preview);
   if (pv) out.preview = pv;
   if (o.exportScale === 1 || o.exportScale === 1.5 || o.exportScale === 2) out.exportScale = o.exportScale;
+  out.hybrid = { ...DEFAULT_HYBRID_FX };
+  if (o.hybrid && typeof o.hybrid === 'object') for (const k of Object.keys(DEFAULT_HYBRID_FX) as (keyof typeof DEFAULT_HYBRID_FX)[]) out.hybrid[k] = num(o.hybrid[k], DEFAULT_HYBRID_FX[k]);
   return out;
 }
 
@@ -101,7 +104,7 @@ export function parseProject(text: string): Project {
   });
   return {
     format: 'lostdir-ascii-cinema',
-    version: 3,
+    version: 4,
     name: String(raw.name ?? 'proyecto'),
     seed: num(raw.seed, 1337) >>> 0,
     fps: raw.fps === 30 ? 30 : 24,

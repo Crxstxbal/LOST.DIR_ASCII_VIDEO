@@ -1,0 +1,295 @@
+{
+  "id": "red_field",
+  "name": "RED FIELD — HYBRID TEST",
+  "description": "Escena experimental del motor HYBRID: terreno 3D ondulado, rosas espaciales con glifos libres, viento, reacción al paso, luz baja y niebla roja. En LEGACY usa las capas del campo de rosas para poder compararse.",
+  "references": [
+    "References/06_VISUAL_REFERENCES"
+  ],
+  "params": {
+    "roseDensity": 1,
+    "roseHeight": 1,
+    "petals": 1,
+    "skyGlow": 0.75,
+    "cloudCover": 0.42,
+    "cloudSpeed": 0.3,
+    "sunX": 0.3,
+    "sunHeight": 0.04,
+    "fogDensity": 0.8,
+    "fogBands": 0.8,
+    "fogHeight": 1,
+    "ridgeHeight": 0.5,
+    "relief": 1.0,
+    "windiness": 1.0,
+    "blades": 1.0,
+    "keyLight": 1.0,
+    "lightAzimuth": 0.45,
+    "lightElevation": 0.16
+  },
+  "paramDefs": [
+    {
+      "key": "roseDensity",
+      "label": "Densidad de rosas",
+      "min": 0,
+      "max": 1.4,
+      "step": 0.02
+    },
+    {
+      "key": "roseHeight",
+      "label": "Altura de rosas",
+      "min": 0.3,
+      "max": 2,
+      "step": 0.05
+    },
+    {
+      "key": "petals",
+      "label": "Pétalos al viento",
+      "min": 0,
+      "max": 4,
+      "step": 0.05
+    },
+    {
+      "key": "skyGlow",
+      "label": "Resplandor del cielo",
+      "min": 0,
+      "max": 1.5,
+      "step": 0.05
+    },
+    {
+      "key": "cloudCover",
+      "label": "Nubes",
+      "min": 0,
+      "max": 1,
+      "step": 0.02
+    },
+    {
+      "key": "cloudSpeed",
+      "label": "Velocidad de nubes",
+      "min": 0,
+      "max": 3,
+      "step": 0.05
+    },
+    {
+      "key": "sunX",
+      "label": "Posición del sol (x)",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "key": "sunHeight",
+      "label": "Altura del sol",
+      "min": -0.1,
+      "max": 0.5,
+      "step": 0.01
+    },
+    {
+      "key": "fogDensity",
+      "label": "Densidad de niebla",
+      "min": 0,
+      "max": 3,
+      "step": 0.05
+    },
+    {
+      "key": "fogBands",
+      "label": "Bancos de niebla",
+      "min": 0,
+      "max": 2,
+      "step": 0.05
+    },
+    {
+      "key": "fogHeight",
+      "label": "Altura de niebla",
+      "min": 0.2,
+      "max": 3,
+      "step": 0.05
+    },
+    {
+      "key": "ridgeHeight",
+      "label": "Colinas lejanas",
+      "min": 0,
+      "max": 3,
+      "step": 0.05
+    },
+    {
+      "key": "relief",
+      "label": "HYBRID · relieve del terreno",
+      "min": 0,
+      "max": 3,
+      "step": 0.05
+    },
+    {
+      "key": "blades",
+      "label": "HYBRID · maleza seca",
+      "min": 0,
+      "max": 2,
+      "step": 0.05
+    },
+    {
+      "key": "keyLight",
+      "label": "HYBRID · luz principal",
+      "min": 0,
+      "max": 2,
+      "step": 0.05
+    },
+    {
+      "key": "lightAzimuth",
+      "label": "HYBRID · dirección de la luz",
+      "min": -3.14,
+      "max": 3.14,
+      "step": 0.02
+    },
+    {
+      "key": "lightElevation",
+      "label": "HYBRID · altura de la luz",
+      "min": 0.02,
+      "max": 1.2,
+      "step": 0.01
+    }
+  ],
+  "light": {
+    "side": -1,
+    "rim": 1.0,
+    "rimColor": "#E4A18B",
+    "ambient": "#8E292D",
+    "ambientAmt": 0.1
+  },
+  "fogColor": "#6E3A3A",
+  "layers": [
+    {
+      "generator": "sky",
+      "params": {
+        "zenith": "#1A0F14",
+        "mid": "sepia",
+        "horizon": "#B5605A",
+        "cloud": "#3A2428",
+        "cloudLit": "pale",
+        "sun": "pale"
+      }
+    },
+    {
+      "generator": "ridges",
+      "params": {
+        "distance": 2600,
+        "height": 90,
+        "scale": 700,
+        "seed": 4,
+        "color": "#2A1A1E",
+        "fogK": 0.06,
+        "fogMix": 0.9,
+        "density": 0.22
+      }
+    },
+    {
+      "generator": "ridges",
+      "params": {
+        "distance": 900,
+        "height": 18,
+        "scale": 160,
+        "seed": 6,
+        "color": "#1C1214",
+        "fogK": 0.1,
+        "fogMix": 0.75,
+        "density": 0.3
+      }
+    },
+    {
+      "generator": "roseGround",
+      "params": {
+        "bloom": 0.6
+      }
+    },
+    {
+      "generator": "fogBands",
+      "params": {
+        "depth": 70,
+        "amount": 0.45,
+        "height": 6,
+        "seed": 15,
+        "light": 0.35
+      }
+    },
+    {
+      "generator": "roses",
+      "params": {
+        "density": 0.72,
+        "far": 45
+      }
+    },
+    {
+      "generator": "particles",
+      "params": {
+        "kind": "petal",
+        "count": 70,
+        "amountParam": "petals",
+        "colors": [
+          "red",
+          "blood",
+          "pale"
+        ],
+        "zFar": 25
+      }
+    }
+  ],
+  "hybrid": {
+    "terrain": {
+      "relief": 1.0,
+      "pathZ": 0,
+      "soil": "#140809",
+      "undergrowth": "#2B0C0F",
+      "far": "#3A1517"
+    },
+    "ridges": [
+      {
+        "dist": 240,
+        "height": 18
+      },
+      {
+        "dist": 460,
+        "height": 46
+      }
+    ],
+    "vegetation": {
+      "density": 0.8,
+      "far": 70,
+      "height": 1.0,
+      "blades": 1.0,
+      "petals": 1.0
+    },
+    "colors": {
+      "flowers": [
+        "#8E292D",
+        "#B02A2E",
+        "#E33B38",
+        "#C9473C",
+        "#E4A18B"
+      ],
+      "stem": "#2A1012",
+      "leaf": "#3A1416",
+      "blades": [
+        "#5A2A20",
+        "#6E3326",
+        "#4A1F18",
+        "#7A3A2A"
+      ]
+    },
+    "light": {
+      "key": "#E8704A",
+      "keyI": 1.15,
+      "ambient": "#5A1E22",
+      "ambientI": 0.55,
+      "rim": 0.9
+    },
+    "sky": {
+      "zenith": "#0A0507",
+      "horizon": "#7A2226",
+      "glow": "#E4603F",
+      "clouds": 0.55,
+      "cloudSpeed": 0.6
+    },
+    "fog": {
+      "color": "#5E1D20",
+      "density": 0.011,
+      "height": 0.12
+    }
+  }
+}

@@ -4,6 +4,7 @@ import { ground, rocks, spires } from './generators/terrain';
 import { roseGround, roses } from './generators/roses';
 import wasteland from '../../../data/locations/wasteland.json';
 import roseField from '../../../data/locations/rose_field.json';
+import redField from '../../../data/locations/red_field.json';
 
 /** Generator registry: new generators register here; locations reference them by name in JSON. */
 const generators = new Map<string, Generator>();
@@ -39,3 +40,4 @@ export function listLocations(): LocationDef[] {
 
 registerLocation(wasteland as unknown as LocationDef);
 registerLocation(roseField as unknown as LocationDef);
+registerLocation(redField as unknown as LocationDef);

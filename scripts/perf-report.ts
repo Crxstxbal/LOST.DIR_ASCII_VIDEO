@@ -3,13 +3,15 @@
  * where the time goes (animation, every scene layer, raster passes, ASCII, post).
  *
  *   npm run perf -- [--profile performance|balanced|quality] [--frames 12] [--shot id]
+ *                   [--template redfield] [--renderer legacy|hybrid]
  *
  * Numbers are milliseconds per frame on this machine, Node + @napi-rs/canvas
  * (the browser worker uses OffscreenCanvas; absolute values differ slightly).
  */
 import { useNodeCanvas } from './nodeCanvas';
 import { renderFrame } from '../src/engine/render';
-import { defaultProject } from '../src/engine/project/schema';
+import { defaultProject, type RendererId } from '../src/engine/project/schema';
+import { redFieldProject } from '../src/engine/project/templates';
 import { PREVIEW_PROFILES, type PreviewProfileId } from '../src/engine/project/profiles';
 
 useNodeCanvas();
@@ -20,7 +22,8 @@ const arg = (k: string, d?: string) => {
 };
 const profileIds = (arg('profile') ? [arg('profile')] : Object.keys(PREVIEW_PROFILES)) as PreviewProfileId[];
 const N = Number(arg('frames', '12'));
-const p = defaultProject();
+const p = arg('template') === 'redfield' ? redFieldProject() : defaultProject();
+const renderer = arg('renderer') as RendererId | undefined;
 const shots = arg('shot') ? p.shots.map((s, i) => [s, i] as const).filter(([s]) => s.id === arg('shot')) : p.shots.map((s, i) => [s, i] as const);
 
 for (const pid of profileIds) {
@@ -28,9 +31,9 @@ for (const pid of profileIds) {
   console.log(`\n=== perfil ${pid}: ${Q.w}×${Q.h}, rejilla ×${Q.cols} ===`);
   const totals: Record<string, number> = {};
   for (const [shot, i] of shots) {
-    renderFrame(p, i, 2, { width: Q.w, height: Q.h, colsScale: Q.cols }); // warm caches/simulation
+    renderFrame(p, i, 2, { width: Q.w, height: Q.h, colsScale: Q.cols, renderer }); // warm caches/simulation
     const prof: Record<string, number> = {};
-    for (let f = 1; f <= N; f++) renderFrame(p, i, 2 + f / p.fps, { width: Q.w, height: Q.h, colsScale: Q.cols, profile: prof });
+    for (let f = 1; f <= N; f++) renderFrame(p, i, 2 + f / p.fps, { width: Q.w, height: Q.h, colsScale: Q.cols, profile: prof, renderer });
     const avg = (k: string) => (prof[k] ?? 0) / N;
     const rows = Object.keys(prof)
       .filter((k) => k !== 'TOTAL')

@@ -1,4 +1,4 @@
-import type { Project } from '../engine/project/schema';
+import type { Project, RendererId } from '../engine/project/schema';
 import { PREVIEW_PROFILES } from '../engine/project/profiles';
 import { projectDuration, shotAt } from '../engine/render';
 import { RenderClient, type Frame } from './renderClient';
@@ -29,6 +29,9 @@ export interface PreviewStats {
   lod: string | null;
   /** Latest per-stage breakdown (when enabled). */
   profile: Record<string, number> | null;
+  /** Renderer of the last frame and its counters. */
+  renderer: RendererId;
+  rstats: Record<string, number> | null;
 }
 
 interface PlayState {
@@ -55,9 +58,11 @@ export class PreviewEngine {
   private dropTimes: number[] = [];
   private renderMs: number[] = [];
   private drawMsAvg = 0;
-  private last: Pick<PreviewStats, 'cols' | 'rows' | 'lod'> = { cols: 0, rows: 0, lod: null };
+  private last: Pick<PreviewStats, 'cols' | 'rows' | 'lod' | 'renderer' | 'rstats'> = { cols: 0, rows: 0, lod: null, renderer: 'legacy', rstats: null };
   private lastProfile: Record<string, number> | null = null;
   profiling = false;
+  /** Forced renderer (comparator / selector); undefined = each shot's own renderer. */
+  renderer: RendererId | undefined = undefined;
   onTime: ((t: number) => void) | null = null;
   onStats: ((s: PreviewStats) => void) | null = null;
   onError: ((e: Error) => void) | null = null;
@@ -102,7 +107,7 @@ export class PreviewEngine {
     const a = shotAt(p, T);
     const Q = this.profile();
     this.clients[0]
-      .render(a.index, a.t, Q.w, Q.h, Q.cols, this.profiling)
+      .render(a.index, a.t, Q.w, Q.h, Q.cols, this.profiling, this.renderer)
       .then((f) => {
         if (!this.play) this.draw(f);
       })
@@ -182,7 +187,7 @@ export class PreviewEngine {
       const T = this.timeOf(st, k);
       const a = shotAt(p, T);
       const prof = this.profiling && wi === 0;
-      c.render(a.index, a.t, Q.w, Q.h, Q.cols, prof)
+      c.render(a.index, a.t, Q.w, Q.h, Q.cols, prof, this.renderer)
         .then((f) => {
           st.inflight.delete(k);
           if (this.play !== st) return;
@@ -225,7 +230,7 @@ export class PreviewEngine {
     this.drawTimes.push(t1);
     this.renderMs.push(f.ms);
     if (this.renderMs.length > 24) this.renderMs.shift();
-    this.last = { cols: f.cols, rows: f.rows, lod: f.lod };
+    this.last = { cols: f.cols, rows: f.rows, lod: f.lod, renderer: f.renderer ?? 'legacy', rstats: f.stats ?? null };
     if (f.profile) this.lastProfile = f.profile;
     this.emitStats(t1);
   }

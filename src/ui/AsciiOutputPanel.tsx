@@ -1,5 +1,5 @@
 import { CHARSETS } from '../engine/ascii/charsets';
-import { RESOLUTION_PRESETS, type AsciiOutput } from '../engine/project/schema';
+import { DEFAULT_HYBRID_FX, RESOLUTION_PRESETS, type AsciiOutput, type HybridFx } from '../engine/project/schema';
 import { gridFor } from '../engine/render';
 import { PREVIEW_PROFILES, type PreviewProfileId } from '../engine/project/profiles';
 import { Section, Select, Slider, Toggle } from './controls';
@@ -18,6 +18,8 @@ const EXPORT_SCALES: { value: '1' | '1.5' | '2'; label: string }[] = [
  */
 export function AsciiOutputPanel({ output, onChange }: { output: AsciiOutput; onChange: (o: AsciiOutput) => void }) {
   const set = (patch: Partial<AsciiOutput>) => onChange({ ...output, ...patch });
+  const hx = { ...DEFAULT_HYBRID_FX, ...(output.hybrid ?? {}) };
+  const setH = (patch: Partial<HybridFx>) => set({ hybrid: { ...hx, ...patch } });
   const preset = RESOLUTION_PRESETS.some((p) => p.cols === output.cols);
   const g = gridFor(output.cols, 1920, 1080);
   return (
@@ -60,6 +62,14 @@ export function AsciiOutputPanel({ output, onChange }: { output: AsciiOutput; on
           options={EXPORT_SCALES}
           onChange={(v) => set({ exportScale: Number(v) as AsciiOutput['exportScale'] })}
         />
+      </Section>
+      <Section title="Efectos híbridos">
+        <p className="note">Solo afectan al renderizador HYBRID. Complementan el ASCII, no lo sustituyen.</p>
+        <Slider label="Glifos libres (vegetación)" value={hx.strokes} min={0} max={1} step={0.01} onChange={(strokes) => setH({ strokes })} hint="0 = solo la rejilla global" />
+        <Slider label="Bloom" value={hx.bloom} min={0} max={1.5} step={0.01} onChange={(bloom) => setH({ bloom })} />
+        <Slider label="Niebla" value={hx.fog} min={0} max={2.5} step={0.01} onChange={(fog) => setH({ fog })} />
+        <Slider label="Sombras" value={hx.shadows} min={0} max={1} step={0.01} onChange={(shadows) => setH({ shadows })} />
+        <Slider label="Luz ambiente" value={hx.ambient} min={0} max={2} step={0.01} onChange={(ambient) => setH({ ambient })} />
       </Section>
     </div>
   );

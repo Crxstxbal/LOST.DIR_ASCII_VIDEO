@@ -72,4 +72,6 @@ export interface LocationDef {
   light: { side: number; rim: number; rimColor: string; ambient: string; ambientAmt: number };
   fogColor: string;
   layers: LocationLayer[];
+  /** World description for the HYBRID renderer (absent = location has no HYBRID world). */
+  hybrid?: any;
 }

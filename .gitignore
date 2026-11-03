@@ -2,3 +2,6 @@ node_modules/
 dist/
 exports/
 .renders/
+
+# large reference videos (kept locally, not versioned)
+References/06_VISUAL_REFERENCES/*.mp4
